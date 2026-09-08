@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  name         String?
+  createdAt    DateTime   @default(now()) @map("created_at")
+  habits       Habit[]
+  categories   Category[]
+  expenses     Expense[]
+  @@map("users")
+}
+
+model Habit {
+  id        Int         @id @default(autoincrement())
+  userId    Int         @map("user_id")
+  name      String
+  frequency String      @default("daily")
+  color     String      @default("#F4A261")
+  archived  Boolean     @default(false)
+  createdAt DateTime    @default(now()) @map("created_at")
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs      HabitLog[]
+  @@index([userId])
+  @@map("habits")
+}
+
+model HabitLog {
+  id        Int      @id @default(autoincrement())
+  habitId   Int      @map("habit_id")
+  date      DateTime @db.Date
+  completed Boolean
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  @@unique([habitId, date])
+  @@index([habitId, date])
+  @@map("habit_logs")
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  userId   Int       @map("user_id")
+  name     String
+  color    String    @default("#2A9D8F")
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+  @@unique([userId, name])
+  @@map("categories")
+}
+
+model Expense {
+  id             Int       @id @default(autoincrement())
+  userId         Int       @map("user_id")
+  categoryId     Int?      @map("category_id")
+  amount         Decimal   @db.Decimal(10, 2)
+  note           String?
+  date           DateTime  @db.Date
+  isRecurring    Boolean   @default(false) @map("is_recurring")
+  recurrenceRule String?   @map("recurrence_rule")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  @@index([userId, date])
+  @@index([categoryId])
+  @@map("expenses")
+}
